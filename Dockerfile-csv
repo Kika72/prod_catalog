@@ -1,0 +1,7 @@
+FROM alpine:latest
+
+COPY .build/csv-source /
+
+EXPOSE 3000
+
+CMD ["/csv-source"]

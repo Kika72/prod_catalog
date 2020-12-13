@@ -1,0 +1,11 @@
+app:
+  port: 5000
+  requestTimeout: 5s
+  batchSize: 10
+mongo:
+  host: mongodb
+  port: 27017
+  username: root
+  password: RootToor396a
+  database: prod_catalog
+  collection: products
