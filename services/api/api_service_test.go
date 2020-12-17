@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
 
 	"prod_catalog/config"
 	"prod_catalog/services/data"
@@ -98,8 +99,10 @@ func prepareServerAndClient(t *testing.T) (*grpc.ClientConn, storage.Storage) {
 	lis := bufconn.Listen(bufSize)
 	s := grpc.NewServer()
 
-	mongodb := testutils.PrepareMongoDB(t, context.Background())
-	st, err := storage.New(mongodb.Collection(viper.GetString(config.MongoCollection)))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cln, mongodb := testutils.PrepareMongoDB(t, context.Background())
+	st, err := storage.New(ctx, cln, mongodb.Collection(viper.GetString(config.MongoCollection)))
 	require.NoError(t, err)
 	api := NewApi(
 		WithLoader(&URLLoaderMock{}),
@@ -117,8 +120,7 @@ func prepareServerAndClient(t *testing.T) (*grpc.ClientConn, storage.Storage) {
 		return lis.Dial()
 	}
 
-	ctx := context.Background()
-	grpcConn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(dialer), grpc.WithInsecure())
+	grpcConn, err := grpc.DialContext(context.Background(), "bufnet", grpc.WithContextDialer(dialer), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}

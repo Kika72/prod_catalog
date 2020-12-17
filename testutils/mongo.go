@@ -18,7 +18,7 @@ const (
 	TestMongoCollection = "test_prod_coll"
 )
 
-func PrepareMongoDB(t *testing.T, ctx context.Context) *mongo.Database {
+func PrepareMongoDB(t *testing.T, ctx context.Context) (*mongo.Client, *mongo.Database) {
 	viper.SetDefault(config.MongoHost, "localhost")
 	viper.SetDefault(config.MongoPort, 27017)
 	viper.SetDefault(config.MongoDB, "product_test")
@@ -26,11 +26,11 @@ func PrepareMongoDB(t *testing.T, ctx context.Context) *mongo.Database {
 	viper.SetDefault(config.MongoPassword, "RootToor396a")
 	viper.SetDefault(config.MongoCollection, TestMongoCollection)
 
-	db, err := connection.GetMongoDatabase(ctx)
+	cln, db, err := connection.GetMongoDatabase(ctx)
 	require.NoError(t, err)
 
 	err = db.Collection(TestMongoCollection).Drop(ctx)
 	require.NoError(t, err)
 
-	return db
+	return cln, db
 }

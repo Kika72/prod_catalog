@@ -21,10 +21,10 @@ func TestProductStorage_Store(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	db := testutils.PrepareMongoDB(t, ctx)
+	cln, db := testutils.PrepareMongoDB(t, ctx)
 	coll := db.Collection(viper.GetString(config.MongoCollection))
 
-	storage, err := New(coll)
+	storage, err := New(ctx, cln, coll)
 	require.NoError(t, err)
 
 	// store new
@@ -54,11 +54,16 @@ func TestProductStorage_Store(t *testing.T) {
 		}
 		require.NoError(t, storage.Store(ctx, p))
 
-		res := db.Collection(viper.GetString(config.MongoCollection)).
-			FindOne(ctx, bson.M{"name": bson.M{"$eq": p.Name}})
+		res, err := db.Collection(viper.GetString(config.MongoCollection)).
+			Find(ctx, bson.M{"name": bson.M{"$eq": p.Name}})
+		require.NoError(t, err)
 		require.NoError(t, res.Err())
-		saved := data.Product{}
-		require.NoError(t, res.Decode(&saved))
+
+		docs := make([]data.Product, 2)
+		require.NoError(t, res.All(ctx, &docs))
+		require.Len(t, docs, 1)
+
+		saved := docs[0]
 		require.Equal(t, p.Name, saved.Name)
 		require.Equal(t, p.Price, saved.Price)
 		require.WithinDuration(t, time.Now().UTC(), saved.UpdatedAt, 500*time.Millisecond)
@@ -80,6 +85,25 @@ func TestProductStorage_Store(t *testing.T) {
 		docs := make([]bson.M, 2)
 		require.NoError(t, res.All(ctx, &docs))
 		require.Len(t, docs, 2)
+	}
+
+	// update second with same price
+	{
+		p := data.Product{
+			Name:  "name 2",
+			Price: 200,
+		}
+		require.NoError(t, storage.Store(ctx, p))
+
+		res, err := db.Collection(viper.GetString(config.MongoCollection)).
+			Find(ctx, bson.M{"name": bson.M{"$eq": p.Name}})
+		require.NoError(t, err)
+
+		docs := make([]data.Product, 2)
+		require.NoError(t, res.All(ctx, &docs))
+		require.Len(t, docs, 1)
+		saved := docs[0]
+		require.Equal(t, 1, saved.UpdatesCount)
 	}
 
 	// bulk write
@@ -107,10 +131,10 @@ func TestProductStorage_List(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	db := testutils.PrepareMongoDB(t, ctx)
+	cln, db := testutils.PrepareMongoDB(t, ctx)
 	coll := db.Collection(viper.GetString(config.MongoCollection))
 
-	storage, err := New(coll)
+	storage, err := New(ctx, cln, coll)
 	require.NoError(t, err)
 
 	// prepare data

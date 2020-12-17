@@ -33,14 +33,14 @@ func Run() error {
 	l := loader.New(viper.GetDuration(config.AppRequestTimeout))
 
 	connCtx, connCancel := context.WithTimeout(ctx, viper.GetDuration(config.AppRequestTimeout))
-	mongoDb, err := func() (*mongo.Database, error) {
+	client, mongoDb, err := func() (*mongo.Client, *mongo.Database, error) {
 		defer connCancel()
 		return connection.GetMongoDatabase(connCtx)
 	}()
 	if err != nil {
 		return err
 	}
-	st, err := storage.New(mongoDb.Collection(viper.GetString(config.MongoCollection)))
+	st, err := storage.New(connCtx, client, mongoDb.Collection(viper.GetString(config.MongoCollection)))
 	if err != nil {
 		return err
 	}

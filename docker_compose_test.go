@@ -25,7 +25,7 @@ func BenchmarkCatalog(b *testing.B) {
 	b.ResetTimer()
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < b.N; i++ {
-		fCtx, fCancel := context.WithTimeout(context.Background(), time.Second)
+		fCtx, fCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		func() {
 			idx := rand.Intn(10) + 1
 			defer fCancel()
